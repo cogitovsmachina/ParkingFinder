@@ -2,6 +2,7 @@ package mx.essentialab.parkingfinder;
 
 import org.json.JSONObject;
 
+import android.app.ProgressDialog;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
@@ -37,6 +38,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static String SENSOR = "true";
 	private static String QUERY = "parking";
 	private LocationClient locationClient;
+	private ProgressDialog progressDialog;
 
 	// https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ&location=37.3838,-122.037&radius=5000&sensor=true&query=parking
 	@Override
@@ -49,7 +51,8 @@ public class MainActivity extends ActionBarActivity implements
 		map.getMap().setMyLocationEnabled(true);
 
 		// TODO: Ask for parking places in 5km
-
+		progressDialog = ProgressDialog.show(this, "",
+				"Getting your location, please wait");
 		mQueue = Volley.newRequestQueue(getApplicationContext());
 		StringRequest register = new StringRequest(Method.POST, BASE_URL
 				+ "&key=" + KEY + "&location=" + LOCATION + "&radius=" + RADIUS
@@ -63,7 +66,7 @@ public class MainActivity extends ActionBarActivity implements
 							Toast.makeText(MainActivity.this,
 									"Parking spots:" + parkingSpots.toString(),
 									Toast.LENGTH_SHORT).show();
-							Log.e("***", ""+parkingSpots.toString(1));
+							Log.e("***", "" + parkingSpots.toString(1));
 
 						} catch (Exception e) {
 							Log.e("***", e.toString());
@@ -76,8 +79,7 @@ public class MainActivity extends ActionBarActivity implements
 					public void onErrorResponse(VolleyError error) {
 						Log.i("ERROR", error.getMessage());
 					}
-				}) {
-		};
+				});
 		// HACK: Adding RetryPolicy to increase request timeout.
 		register.setRetryPolicy(new DefaultRetryPolicy(15 * 1000, 1, 1.0f));
 		mQueue.add(register);
@@ -94,7 +96,6 @@ public class MainActivity extends ActionBarActivity implements
 	@Override
 	protected void onStart() {
 		locationClient.connect();
-
 		super.onStart();
 	}
 
@@ -112,6 +113,12 @@ public class MainActivity extends ActionBarActivity implements
 
 	@Override
 	public void onConnected(Bundle bundle) {
+        Location currentLocation = locationClient.getLastLocation();	
+        lat = currentLocation.getLatitude();
+        lon = currentLocation.getLongitude();
+		Toast.makeText(this, "LAT " + lat + "LON " + lon, Toast.LENGTH_LONG)
+				.show();
+		progressDialog.dismiss();
 
 	}
 
