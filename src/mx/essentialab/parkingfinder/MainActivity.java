@@ -40,7 +40,6 @@ public class MainActivity extends ActionBarActivity implements
 	private LocationClient locationClient;
 	private ProgressDialog progressDialog;
 
-	// https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ&location=37.3838,-122.037&radius=5000&sensor=true&query=parking
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -50,41 +49,7 @@ public class MainActivity extends ActionBarActivity implements
 				.findFragmentById(R.id.map);
 		map.getMap().setMyLocationEnabled(true);
 
-		// TODO: Ask for parking places in 5km
-		progressDialog = ProgressDialog.show(this, "",
-				"Getting your location, please wait");
-		mQueue = Volley.newRequestQueue(getApplicationContext());
-		StringRequest register = new StringRequest(Method.POST, BASE_URL
-				+ "&key=" + KEY + "&location=" + LOCATION + "&radius=" + RADIUS
-				+ "&sensor=" + SENSOR + "&query=" + QUERY,
-				new Response.Listener<String>() {
-
-					@Override
-					public void onResponse(String response) {
-						try {
-							JSONObject parkingSpots = new JSONObject(response);
-							Toast.makeText(MainActivity.this,
-									"Parking spots:" + parkingSpots.toString(),
-									Toast.LENGTH_SHORT).show();
-							Log.e("***", "" + parkingSpots.toString(1));
-
-						} catch (Exception e) {
-							Log.e("***", e.toString());
-						}
-					}
-
-				}, new Response.ErrorListener() {
-
-					@Override
-					public void onErrorResponse(VolleyError error) {
-						Log.i("ERROR", error.getMessage());
-					}
-				});
-		// HACK: Adding RetryPolicy to increase request timeout.
-		register.setRetryPolicy(new DefaultRetryPolicy(15 * 1000, 1, 1.0f));
-		mQueue.add(register);
 		locationClient = new LocationClient(this, this, this);
-
 	}
 
 	@Override
@@ -113,13 +78,52 @@ public class MainActivity extends ActionBarActivity implements
 
 	@Override
 	public void onConnected(Bundle bundle) {
-        Location currentLocation = locationClient.getLastLocation();	
-        lat = currentLocation.getLatitude();
-        lon = currentLocation.getLongitude();
+		Location currentLocation = locationClient.getLastLocation();
+		lat = currentLocation.getLatitude();
+		lon = currentLocation.getLongitude();
 		Toast.makeText(this, "LAT " + lat + "LON " + lon, Toast.LENGTH_LONG)
 				.show();
+		// TODO: GET PARKING SPOTS HERE
+		findParking(lat, lon);
 		progressDialog.dismiss();
+	}
 
+	private void findParking(double latitude, double longitude) {
+		progressDialog = ProgressDialog.show(this, "",
+				"Getting your location, please wait");
+		mQueue = Volley.newRequestQueue(getApplicationContext());
+		// https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ&location=37.3838,-122.037&radius=5000&sensor=true&query=parking
+
+		StringRequest register = new StringRequest(Method.POST,
+				BASE_URL + "&key=" + KEY + "&location=" + latitude + ","
+						+ longitude + "&radius=" + RADIUS + "&sensor=" + SENSOR
+						+ "&query=" + QUERY, new Response.Listener<String>() {
+
+					@Override
+					public void onResponse(String response) {
+						try {
+							JSONObject parkingSpots = new JSONObject(response);
+							//TODO: Add markers to the map
+							Toast.makeText(MainActivity.this,
+									"Parking spots:" + parkingSpots.toString(),
+									Toast.LENGTH_SHORT).show();
+							Log.e("***", "" + parkingSpots.toString(1));
+
+						} catch (Exception e) {
+							Log.e("***", e.toString());
+						}
+					}
+
+				}, new Response.ErrorListener() {
+
+					@Override
+					public void onErrorResponse(VolleyError error) {
+						Log.i("ERROR", error.getMessage());
+					}
+				});
+		// HACK: Adding RetryPolicy to increase request timeout.
+		register.setRetryPolicy(new DefaultRetryPolicy(15 * 1000, 1, 1.0f));
+		mQueue.add(register);
 	}
 
 	@Override
