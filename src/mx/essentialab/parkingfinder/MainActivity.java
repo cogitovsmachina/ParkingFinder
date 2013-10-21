@@ -1,5 +1,6 @@
 package mx.essentialab.parkingfinder;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import android.app.ProgressDialog;
@@ -22,6 +23,8 @@ import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MainActivity extends ActionBarActivity implements
 		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
@@ -33,12 +36,14 @@ public class MainActivity extends ActionBarActivity implements
 	private static double lon;
 	private static String BASE_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json?";
 	private static String KEY = "AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ";
-	private static String LOCATION = "" + lat + "" + lon;
+	//private static String LOCATION = "" + lat + "" + lon;
 	private static String RADIUS = "5000";
 	private static String SENSOR = "true";
 	private static String QUERY = "parking";
 	private LocationClient locationClient;
 	private ProgressDialog progressDialog;
+	
+	private JSONArray parkingPlaces = new JSONArray();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -89,6 +94,9 @@ public class MainActivity extends ActionBarActivity implements
 	}
 
 	private void findParking(double latitude, double longitude) {
+		Log.i("Latitude::", ""+latitude);
+		Log.i("Longitude::", ""+longitude);
+
 		progressDialog = ProgressDialog.show(this, "",
 				"Getting your location, please wait");
 		mQueue = Volley.newRequestQueue(getApplicationContext());
@@ -108,7 +116,22 @@ public class MainActivity extends ActionBarActivity implements
 									"Parking spots:" + parkingSpots.toString(),
 									Toast.LENGTH_SHORT).show();
 							Log.e("***", "" + parkingSpots.toString(1));
+							
+							
+							parkingPlaces = parkingSpots.getJSONArray("results");
+							for(int i = 0; i < parkingPlaces.length(); i++){
+								String title = parkingPlaces.getJSONObject(i).getString("formatted_address");
+								String lat =  parkingPlaces.getJSONObject(i).
+										getJSONObject("geometry").getJSONObject("location").getString("lat");
+								String lon = parkingPlaces.getJSONObject(i).
+										getJSONObject("geometry").getJSONObject("location").getString("lng");
+								Log.w("Title:::", ""+title);
+								Log.w("Latitude:::", ""+lat);
+								Log.w("Longitude:::", ""+lon);
 
+								drawingMarkers(title, lat, lon);
+							}
+							
 						} catch (Exception e) {
 							Log.e("***", e.toString());
 						}
@@ -135,6 +158,11 @@ public class MainActivity extends ActionBarActivity implements
 	public void onLocationChanged(Location location) {
 		lat = location.getLatitude();
 		lon = location.getLongitude();
+	}
+	
+	public void drawingMarkers(String title, String lat, String lon){
+		LatLng position = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+		map.getMap().addMarker(new MarkerOptions().position(position).title(title));
 	}
 
 }
