@@ -6,9 +6,12 @@ import org.json.JSONObject;
 import android.app.ProgressDialog;
 import android.location.Location;
 import android.os.Bundle;
+import android.support.v7.app.ActionBar.OnNavigationListener;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.ArrayAdapter;
+import android.widget.SpinnerAdapter;
 import android.widget.Toast;
 
 import com.android.volley.DefaultRetryPolicy;
@@ -22,6 +25,8 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -34,14 +39,18 @@ public class MainActivity extends ActionBarActivity implements
 	private SupportMapFragment map;
 	private static double lat;
 	private static double lon;
-	private static String BASE_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json?";
+	private static String BASE_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
 	private static String KEY = "AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ";
 	//private static String LOCATION = "" + lat + "" + lon;
-	private static String RADIUS = "5000";
-	private static String SENSOR = "true";
-	private static String QUERY = "parking";
+	private static String RADIUS = "50000";
+	private static String SENSOR = "false";
+	//private static String QUERY = "parking";
+	private static String TYPES = "parking";
 	private LocationClient locationClient;
 	private ProgressDialog progressDialog;
+	private String status = null;
+	
+	private SpinnerAdapter spinner;
 	
 	private JSONArray parkingPlaces = new JSONArray();
 
@@ -49,12 +58,25 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-
+		getSupportActionBar().setNavigationMode(android.support.v7.app.ActionBar.NAVIGATION_MODE_LIST);
 		map = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
 		map.getMap().setMyLocationEnabled(true);
 
 		locationClient = new LocationClient(this, this, this);
+		
+		spinner = ArrayAdapter.createFromResource(this, R.array.action_list,
+		          android.R.layout.simple_spinner_dropdown_item);
+		
+		OnNavigationListener nav = new OnNavigationListener() {
+			String[] strings = getResources().getStringArray(R.array.action_list);
+			@Override
+			public boolean onNavigationItemSelected(int position, long itemId) {
+				Log.i("Selected", strings[position]);
+				return true;
+			}
+		};
+		getSupportActionBar().setListNavigationCallbacks(spinner, nav);
 	}
 
 	@Override
@@ -86,14 +108,19 @@ public class MainActivity extends ActionBarActivity implements
 		Location currentLocation = locationClient.getLastLocation();
 		lat = currentLocation.getLatitude();
 		lon = currentLocation.getLongitude();
+		
+		LatLng latLng = new LatLng(lat, lon);
+	    CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 15);
+	    //map.animateCamera(cameraUpdate);
+	    map.getMap().moveCamera(cameraUpdate);
 		Toast.makeText(this, "LAT " + lat + "LON " + lon, Toast.LENGTH_LONG)
 				.show();
 		// TODO: GET PARKING SPOTS HERE
-		findParking(lat, lon);
+		findParking(lat, lon, RADIUS);
 		progressDialog.dismiss();
 	}
 
-	private void findParking(double latitude, double longitude) {
+	private void findParking(double latitude, double longitude, String radius) {
 		Log.i("Latitude::", ""+latitude);
 		Log.i("Longitude::", ""+longitude);
 
@@ -101,36 +128,37 @@ public class MainActivity extends ActionBarActivity implements
 				"Getting your location, please wait");
 		mQueue = Volley.newRequestQueue(getApplicationContext());
 		// https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ&location=37.3838,-122.037&radius=5000&sensor=true&query=parking
-
-		StringRequest register = new StringRequest(Method.POST,
-				BASE_URL + "&key=" + KEY + "&location=" + latitude + ","
-						+ longitude + "&radius=" + RADIUS + "&sensor=" + SENSOR
-						+ "&query=" + QUERY, new Response.Listener<String>() {
+		// https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=19.3134071,-98.918552&radius=50000&types=parking&sensor=false&key=AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ
+		
+		StringRequest register = new StringRequest(Method.POST,BASE_URL+"location="+latitude+","+longitude+
+				"&radius="+radius+"&types="+TYPES+"&sensor="+SENSOR+
+				"&key="+KEY, new Response.Listener<String>() {
 
 					@Override
 					public void onResponse(String response) {
 						try {
 							JSONObject parkingSpots = new JSONObject(response);
-							//TODO: Add markers to the map
-							Toast.makeText(MainActivity.this,
-									"Parking spots:" + parkingSpots.toString(),
-									Toast.LENGTH_SHORT).show();
-							Log.e("***", "" + parkingSpots.toString(1));
 							
+							status = parkingSpots.getString("status");
 							
-							parkingPlaces = parkingSpots.getJSONArray("results");
-							for(int i = 0; i < parkingPlaces.length(); i++){
-								String title = parkingPlaces.getJSONObject(i).getString("formatted_address");
-								String lat =  parkingPlaces.getJSONObject(i).
-										getJSONObject("geometry").getJSONObject("location").getString("lat");
-								String lon = parkingPlaces.getJSONObject(i).
-										getJSONObject("geometry").getJSONObject("location").getString("lng");
-								Log.w("Title:::", ""+title);
-								Log.w("Latitude:::", ""+lat);
-								Log.w("Longitude:::", ""+lon);
+							if(status.equals("OK")){
+								parkingPlaces = parkingSpots.getJSONArray("results");
+								for(int i = 0; i < parkingPlaces.length(); i++){
+									String title = parkingPlaces.getJSONObject(i).getString("name");
+									String lat =  parkingPlaces.getJSONObject(i).
+											getJSONObject("geometry").getJSONObject("location").getString("lat");
+									String lon = parkingPlaces.getJSONObject(i).
+											getJSONObject("geometry").getJSONObject("location").getString("lng");
 
-								drawingMarkers(title, lat, lon);
+									drawingMarkers(title, lat, lon);
+								}
+							}else{
+								Toast.makeText(MainActivity.this,
+										"Parking spots: NO Results found, try again.",
+										Toast.LENGTH_SHORT).show();
 							}
+							
+							
 							
 						} catch (Exception e) {
 							Log.e("***", e.toString());
@@ -164,5 +192,4 @@ public class MainActivity extends ActionBarActivity implements
 		LatLng position = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
 		map.getMap().addMarker(new MarkerOptions().position(position).title(title));
 	}
-
 }
