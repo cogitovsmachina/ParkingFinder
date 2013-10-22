@@ -3,7 +3,9 @@ package mx.essentialab.parkingfinder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import android.content.Intent;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar.OnNavigationListener;
 import android.support.v7.app.ActionBarActivity;
@@ -26,8 +28,10 @@ import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MainActivity extends ActionBarActivity implements
@@ -89,6 +93,19 @@ public class MainActivity extends ActionBarActivity implements
 			}
 		};
 		getSupportActionBar().setListNavigationCallbacks(spinner, nav);
+		
+		map.getMap().setOnMarkerClickListener(new OnMarkerClickListener() {
+			
+			@Override
+			public boolean onMarkerClick(Marker marker) {
+				Log.w("pressed:::", marker.getPosition()+"");
+				LatLng pos = marker.getPosition();
+				String posi = pos.latitude+","+pos.longitude;
+				Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q="+posi));
+				startActivity(i);
+				return false;
+			}
+		});
 	}
 
 	@Override
@@ -125,8 +142,8 @@ public class MainActivity extends ActionBarActivity implements
 	    CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 15);
 	    //map.animateCamera(cameraUpdate);
 	    map.getMap().moveCamera(cameraUpdate);
-		Toast.makeText(this, "LAT " + lat + "LON " + lon, Toast.LENGTH_LONG)
-				.show();
+		/*Toast.makeText(this, "LAT " + lat + "LON " + lon, Toast.LENGTH_LONG)
+				.show();*/
 		// TODO: GET PARKING SPOTS HERE
 		findParking(RADIUS);
 		//progressDialog.dismiss();
