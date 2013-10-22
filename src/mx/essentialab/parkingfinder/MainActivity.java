@@ -3,7 +3,6 @@ package mx.essentialab.parkingfinder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import android.app.ProgressDialog;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar.OnNavigationListener;
@@ -42,12 +41,12 @@ public class MainActivity extends ActionBarActivity implements
 	private static String BASE_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
 	private static String KEY = "AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ";
 	//private static String LOCATION = "" + lat + "" + lon;
-	private static String RADIUS = "50000";
+	private static String RADIUS = "10000";
 	private static String SENSOR = "false";
 	//private static String QUERY = "parking";
 	private static String TYPES = "parking";
 	private LocationClient locationClient;
-	private ProgressDialog progressDialog;
+	//private ProgressDialog progressDialog;
 	private String status = null;
 	
 	private SpinnerAdapter spinner;
@@ -73,6 +72,19 @@ public class MainActivity extends ActionBarActivity implements
 			@Override
 			public boolean onNavigationItemSelected(int position, long itemId) {
 				Log.i("Selected", strings[position]);
+				switch (position) {
+				case 0:
+					findParking("10000");
+					break;
+				case 1:
+					findParking("20000");
+					break;
+				case 2:
+					findParking("30000");
+					break;
+				default:
+					break;
+				}
 				return true;
 			}
 		};
@@ -116,21 +128,20 @@ public class MainActivity extends ActionBarActivity implements
 		Toast.makeText(this, "LAT " + lat + "LON " + lon, Toast.LENGTH_LONG)
 				.show();
 		// TODO: GET PARKING SPOTS HERE
-		findParking(lat, lon, RADIUS);
-		progressDialog.dismiss();
+		findParking(RADIUS);
+		//progressDialog.dismiss();
 	}
 
-	private void findParking(double latitude, double longitude, String radius) {
-		Log.i("Latitude::", ""+latitude);
-		Log.i("Longitude::", ""+longitude);
-
-		progressDialog = ProgressDialog.show(this, "",
-				"Getting your location, please wait");
+	private void findParking(String radius) {
+		
+		map.getMap().clear();
+		/*progressDialog = ProgressDialog.show(this, "",
+				"Getting your location, please wait");*/
 		mQueue = Volley.newRequestQueue(getApplicationContext());
 		// https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ&location=37.3838,-122.037&radius=5000&sensor=true&query=parking
 		// https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=19.3134071,-98.918552&radius=50000&types=parking&sensor=false&key=AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ
 		
-		StringRequest register = new StringRequest(Method.POST,BASE_URL+"location="+latitude+","+longitude+
+		StringRequest register = new StringRequest(Method.POST,BASE_URL+"location="+lat+","+lon+
 				"&radius="+radius+"&types="+TYPES+"&sensor="+SENSOR+
 				"&key="+KEY, new Response.Listener<String>() {
 
@@ -150,8 +161,9 @@ public class MainActivity extends ActionBarActivity implements
 									String lon = parkingPlaces.getJSONObject(i).
 											getJSONObject("geometry").getJSONObject("location").getString("lng");
 
-									drawingMarkers(title, lat, lon);
+									drawingMarkers(title, lat, lon);	
 								}
+								
 							}else{
 								Toast.makeText(MainActivity.this,
 										"Parking spots: NO Results found, try again.",
@@ -175,6 +187,7 @@ public class MainActivity extends ActionBarActivity implements
 		// HACK: Adding RetryPolicy to increase request timeout.
 		register.setRetryPolicy(new DefaultRetryPolicy(15 * 1000, 1, 1.0f));
 		mQueue.add(register);
+		
 	}
 
 	@Override
