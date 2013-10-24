@@ -22,17 +22,24 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.analytics.tracking.android.EasyTracker;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener;
+import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+
+import com.newrelic.agent.android.NewRelic;
+import com.parse.Parse;
+import com.parse.ParseAnalytics;
+import com.parse.ParseInstallation;
+import com.parse.PushService;
 
 public class MainActivity extends ActionBarActivity implements
 		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
@@ -68,6 +75,15 @@ public class MainActivity extends ActionBarActivity implements
 
 		locationClient = new LocationClient(this, this, this);
 		
+		NewRelic.withApplicationToken(
+				"AAe325ca6e0c6fad2df0e48bd0798abe048a0455b0"
+				).start(this.getApplication());
+		
+		Parse.initialize(this, "L3zahJY9OJWVVPQJcQ4VAmDKWlfoqkZOhl0YSFis", "QM9MU35aVezSOu2sf9Xu5SOYgYYqJzt7ebgxhreb"); 
+		PushService.setDefaultPushCallback(this, MainActivity.class);
+		ParseInstallation.getCurrentInstallation().saveInBackground();
+		ParseAnalytics.trackAppOpened(getIntent());
+		
 		spinner = ArrayAdapter.createFromResource(this, R.array.action_list,
 		          android.R.layout.simple_spinner_dropdown_item);
 		
@@ -94,16 +110,15 @@ public class MainActivity extends ActionBarActivity implements
 		};
 		getSupportActionBar().setListNavigationCallbacks(spinner, nav);
 		
-		map.getMap().setOnMarkerClickListener(new OnMarkerClickListener() {
+		map.getMap().setOnInfoWindowClickListener(new OnInfoWindowClickListener() {
 			
 			@Override
-			public boolean onMarkerClick(Marker marker) {
+			public void onInfoWindowClick(Marker marker) {
 				Log.w("pressed:::", marker.getPosition()+"");
 				LatLng pos = marker.getPosition();
 				String posi = pos.latitude+","+pos.longitude;
 				Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q="+posi));
 				startActivity(i);
-				return false;
 			}
 		});
 	}
@@ -112,12 +127,16 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onStop() {
 		locationClient.disconnect();
 		super.onStop();
+		
+		EasyTracker.getInstance(this).activityStop(this);
 	}
 
 	@Override
 	protected void onStart() {
 		locationClient.connect();
 		super.onStart();
+		
+		EasyTracker.getInstance(this).activityStart(this);
 	}
 
 	@Override
@@ -144,12 +163,15 @@ public class MainActivity extends ActionBarActivity implements
 	    map.getMap().moveCamera(cameraUpdate);
 		/*Toast.makeText(this, "LAT " + lat + "LON " + lon, Toast.LENGTH_LONG)
 				.show();*/
-		// TODO: GET PARKING SPOTS HERE
+
 		findParking(RADIUS);
 		//progressDialog.dismiss();
 	}
 
 	private void findParking(String radius) {
+		
+		Log.w("lat:", lat+"");
+		Log.w("lat:", lon+"");
 		
 		map.getMap().clear();
 		/*progressDialog = ProgressDialog.show(this, "",
@@ -187,8 +209,6 @@ public class MainActivity extends ActionBarActivity implements
 										Toast.LENGTH_SHORT).show();
 							}
 							
-							
-							
 						} catch (Exception e) {
 							Log.e("***", e.toString());
 						}
@@ -198,13 +218,15 @@ public class MainActivity extends ActionBarActivity implements
 
 					@Override
 					public void onErrorResponse(VolleyError error) {
-						Log.i("ERROR", error.getMessage());
+						//Log.i("ERROR", error.getMessage());
+						Toast.makeText(MainActivity.this,
+								"Parking spots: Conexión a internet no disponible. Intente de nuevo.",
+								Toast.LENGTH_SHORT).show();
 					}
 				});
 		// HACK: Adding RetryPolicy to increase request timeout.
 		register.setRetryPolicy(new DefaultRetryPolicy(15 * 1000, 1, 1.0f));
-		mQueue.add(register);
-		
+		mQueue.add(register);	
 	}
 
 	@Override
