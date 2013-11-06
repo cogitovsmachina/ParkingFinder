@@ -1,5 +1,15 @@
 package mx.essentialab.parkingfinder;
 
+/*import java.util.HashMap;
+import java.util.List;
+import mx.essentialab.parkingplaces.SFParking;
+import com.parse.FindCallback;
+import com.parse.FunctionCallback;
+import com.parse.ParseObject;
+import com.parse.ParseQuery;
+import com.parse.ParseCloud;
+import com.parse.ParseException;*/
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -39,6 +49,7 @@ import com.newrelic.agent.android.NewRelic;
 import com.parse.Parse;
 import com.parse.ParseAnalytics;
 import com.parse.ParseInstallation;
+
 import com.parse.PushService;
 
 public class MainActivity extends ActionBarActivity implements
@@ -52,7 +63,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static String BASE_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
 	private static String KEY = "AIzaSyAQuvHnfF8LyAu8jDrVqDjxXfN03-1x7BQ";
 	//private static String LOCATION = "" + lat + "" + lon;
-	private static String RADIUS = "10000";
+	private static String RADIUS = "500";
 	private static String SENSOR = "false";
 	//private static String QUERY = "parking";
 	private static String TYPES = "parking";
@@ -71,7 +82,9 @@ public class MainActivity extends ActionBarActivity implements
 		getSupportActionBar().setNavigationMode(android.support.v7.app.ActionBar.NAVIGATION_MODE_LIST);
 		map = (SupportMapFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.map);
-		map.getMap().setMyLocationEnabled(true);
+		if(map.getMap() != null){
+			map.getMap().setMyLocationEnabled(true);
+		}
 
 		locationClient = new LocationClient(this, this, this);
 		
@@ -83,6 +96,8 @@ public class MainActivity extends ActionBarActivity implements
 		PushService.setDefaultPushCallback(this, MainActivity.class);
 		ParseInstallation.getCurrentInstallation().saveInBackground();
 		ParseAnalytics.trackAppOpened(getIntent());
+		// When users indicate they are Giants fans, we subscribe them to that channel.
+        //PushService.subscribe(getApplicationContext(), "Giants", MainActivity.class);
 		
 		spinner = ArrayAdapter.createFromResource(this, R.array.action_list,
 		          android.R.layout.simple_spinner_dropdown_item);
@@ -94,13 +109,13 @@ public class MainActivity extends ActionBarActivity implements
 				Log.i("Selected", strings[position]);
 				switch (position) {
 				case 0:
-					findParking("10000");
+					findParking("500");
 					break;
 				case 1:
-					findParking("20000");
+					findParking("1500");
 					break;
 				case 2:
-					findParking("30000");
+					findParking("2000");
 					break;
 				default:
 					break;
@@ -110,19 +125,34 @@ public class MainActivity extends ActionBarActivity implements
 		};
 		getSupportActionBar().setListNavigationCallbacks(spinner, nav);
 		
-		map.getMap().setOnInfoWindowClickListener(new OnInfoWindowClickListener() {
+		if(map.getMap() != null){
+			map.getMap().setOnInfoWindowClickListener(new OnInfoWindowClickListener() {
 			
-			@Override
-			public void onInfoWindowClick(Marker marker) {
-				Log.w("pressed:::", marker.getPosition()+"");
-				LatLng pos = marker.getPosition();
-				String posi = pos.latitude+","+pos.longitude;
-				Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q="+posi));
-				startActivity(i);
-			}
-		});
+				@Override
+				public void onInfoWindowClick(Marker marker) {
+					Log.w("pressed:::", marker.getPosition()+"");
+					LatLng pos = marker.getPosition();
+					String posi = pos.latitude+","+pos.longitude;
+					Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q="+posi));
+					startActivity(i);
+				}
+			});
+		}
+		
+		
+		
+		/*drawingSFLots();
+		testingParseCloud();
+		getDataFromParse();*/
 	}
 
+	/*private void drawingSFLots() {
+		
+		SFParking park = new SFParking();
+		park.getSFParkData(getApplicationContext(), map);
+		
+	}
+*/
 	@Override
 	protected void onStop() {
 		locationClient.disconnect();
@@ -170,10 +200,12 @@ public class MainActivity extends ActionBarActivity implements
 
 	private void findParking(String radius) {
 		
-		Log.w("lat:", lat+"");
-		Log.w("lat:", lon+"");
+	//	Log.w("lat:", lat+"");
+	//	Log.w("lon:", lon+"");
 		
-		map.getMap().clear();
+		if(map.getMap() != null){
+			map.getMap().clear();
+		}
 		/*progressDialog = ProgressDialog.show(this, "",
 				"Getting your location, please wait");*/
 		mQueue = Volley.newRequestQueue(getApplicationContext());
@@ -220,7 +252,7 @@ public class MainActivity extends ActionBarActivity implements
 					public void onErrorResponse(VolleyError error) {
 						//Log.i("ERROR", error.getMessage());
 						Toast.makeText(MainActivity.this,
-								"Parking spots: Conexión a internet no disponible. Intente de nuevo.",
+								"Parking spots: No internet conexion. Intente de nuevo.",
 								Toast.LENGTH_SHORT).show();
 					}
 				});
@@ -244,4 +276,31 @@ public class MainActivity extends ActionBarActivity implements
 		LatLng position = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
 		map.getMap().addMarker(new MarkerOptions().position(position).title(title));
 	}
+	
+	/*public void testingParseCloud(){
+		ParseCloud.callFunctionInBackground("hello", new HashMap<String, Object>(), new FunctionCallback<String>() {			 
+			@Override
+			public void done(String response, ParseException e) {
+				if (e == null) {
+				    //  Log.e("RESPONSE",response);
+				    }
+			}
+			});
+	}*/
+	
+	/*public void getDataFromParse(){
+		ParseQuery<ParseObject> query = ParseQuery.getQuery("GameScore");
+		query.whereEqualTo("title", "Mi titulo");
+		query.findInBackground(new FindCallback<ParseObject>() {
+			
+			@Override
+			public void done(List<ParseObject> result, ParseException e) {
+				if(e == null){
+					Log.i("Result:", result.size()+"");
+				}else{
+					Log.i("Error:", e.toString());
+				}
+			}
+		});
+	}*/
 }

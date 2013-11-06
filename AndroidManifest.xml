@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="mx.essentialab.parkingfinder"
-    android:versionCode="2"
-    android:versionName="1.1" >
+    android:versionCode="5"
+    android:versionName="1.4" >
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="17" />
+        android:targetSdkVersion="19" />
 
     <permission
         android:name="mx.essentialab.MAPS_RECEIVE"
@@ -44,6 +44,9 @@
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="AIzaSyBeXzbadpTvYMGhLZUT6P0Rx_x8s_A3FjY" />
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
         <!-- Production API Key: AIzaSyBeXzbadpTvYMGhLZUT6P0Rx_x8s_A3FjY -->
 		<service android:name="com.parse.PushService" />
 		<receiver android:name="com.parse.ParseBroadcastReceiver">
